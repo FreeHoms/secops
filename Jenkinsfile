@@ -3,11 +3,11 @@ pipeline {
     stages {
         stage ('Daily Compliance Run') {
             steps {
-                echo 'Running automated hardening and compliance scan via SSH on localhost...'
+                echo 'Running automated hardening and compliance scan via Containerized SSH on GKE Node...'
                 script {
                     def remote = [:]
-                    remote.name = "localhost"
-                    remote.host = "127.0.0.1" // Vi ansluter lokalt till Cloud Shell via SSH!
+                    remote.name = "gke-node"
+                    remote.host = "136.115.77.101" // Din fungerande GKE-nod!
                     remote.allowAnyHosts = true
                     
                     withCredentials([sshUserPrivateKey(credentialsId: 'sshUser', keyFileVariable: 'identity', passphraseVariable: '', usernameVariable: 'userName')]) {
@@ -15,16 +15,18 @@ pipeline {
                         remote.identityFile = identity
                         
                         stage ("Enforce with Ansible") {
-                            // Vi kör installationen och playboken via SSH direkt på din host istället för i en container
-                            sshCommand remote: remote, command: 'sudo apt-get update && sudo apt-get install ansible -y'
-                            sshCommand remote: remote, command: 'mkdir -p ~/secops && git clone https://github.com/lftraining-lfs262/secops.git ~/secops || true'
-                            sshCommand remote: remote, command: 'ansible-galaxy collection install devsec.hardening'
-                            sshCommand remote: remote, command: 'cd ~/secops/ansible && ansible-playbook compliance.yaml'
+                            echo "Running Ansible inside a Docker container on the host..."
+                            // Vi laddar ner ditt repo till nodens temporära katalog
+                            sshCommand remote: remote, command: 'mkdir -p /tmp/secops && git clone https://github.com/lftraining-lfs262/secops.git /tmp/secops || (cd /tmp/secops && git pull)'
+                            
+                            // Vi kör Ansible inuti en officiell docker-container så vi slipper apt-get!
+                            sshCommand remote: remote, command: 'docker run --rm -v /tmp/secops:/secops -v /etc:/etc -w /secops/ansible cytopia/ansible ansible-galaxy collection install devsec.hardening && docker run --rm -v /tmp/secops:/secops -v /etc:/etc -w /secops/ansible cytopia/ansible ansible-playbook compliance.yaml'
                         }
                         
                         stage ("Scan with InSpec") {
-                            // Vi kör inspec-kommandot på din host där det redan är installerat
-                            sshCommand remote: remote, command: 'inspec exec --no-distinct-exit /root/linux-baseline/'
+                            echo "Running InSpec inside a Docker container on the host..."
+                            // Vi kör InSpec via Chef:s officiella docker-container, så slipper vi ladda ner InSpec på värdmaskinen!
+                            sshCommand remote: remote, command: 'docker run --rm -v /etc:/etc chef/inspec exec https://github.com/dev-sec/linux-baseline --no-distinct-exit'
                         }
                     }
                 }
