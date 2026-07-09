@@ -6,8 +6,8 @@ pipeline {
                 echo 'Running automated hardening and compliance scan via SSH on localhost...'
                 script {
                     def remote = [:]
-                    remote.name = "localhost"
-                    remote.host = "127.0.0.1" // Vi ansluter lokalt till Cloud Shell via SSH!
+                    remote.name = "cloudshell"
+                    remote.host = "34.12.236.187" // Vi ansluter lokalt till Cloud Shell via SSH!
                     remote.allowAnyHosts = true
                     
                     withCredentials([sshUserPrivateKey(credentialsId: 'sshUser', keyFileVariable: 'identity', passphraseVariable: '', usernameVariable: 'userName')]) {
