@@ -18,8 +18,8 @@ pipeline {
                             echo "Running Ansible inside a Docker container on the host..."
                             sshCommand remote: remote, command: 'mkdir -p /tmp/secops && git clone https://github.com/lftraining-lfs262/secops.git /tmp/secops || (cd /tmp/secops && git pull)'
                             
-                            // Vi har lagt till -e "ansible_os_family=Debian" i slutet av raden nedanför!
-                            sshCommand remote: remote, command: 'docker run --rm -v /tmp/secops:/secops -v /etc:/etc -w /secops/ansible cytopia/ansible ansible-galaxy collection install devsec.hardening -p /secops/collections --ignore-certs && docker run --rm -v /tmp/secops:/secops -v /etc:/etc -e ANSIBLE_COLLECTIONS_PATH=/secops/collections -w /secops/ansible cytopia/ansible ansible-playbook compliance.yaml -e "ansible_os_family=Debian"'
+                            // Vi har lagt till -e "{'os_vars': {}}" i slutet av raden nedanför!
+                            sshCommand remote: remote, command: 'docker run --rm -v /tmp/secops:/secops -v /etc:/etc -w /secops/ansible cytopia/ansible ansible-galaxy collection install devsec.hardening -p /secops/collections --ignore-certs && docker run --rm -v /tmp/secops:/secops -v /etc:/etc -e ANSIBLE_COLLECTIONS_PATH=/secops/collections -w /secops/ansible cytopia/ansible ansible-playbook compliance.yaml -e "{\\'os_vars\\': {}}"'
                         }
                         
                         stage ("Scan with InSpec") {
