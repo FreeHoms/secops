@@ -1,30 +1,32 @@
 pipeline {
-  agent any 
-
-  stages {
-    stage('Daily Compliance Run') {
-      steps{
-        echo 'Running a compliance scan with inspec....'
-          script{
-            def remote = [:]
-            remote.name = "controlnode"
-            remote.host = "136.115.77.101"
-            remote.allowAnyHosts = true
-
-            withCredentials([sshUserPrivateKey(credentialsId: 'sshUser', keyFileVariable: 'identity', passphraseVariable: '', usernameVariable: 'userName')]) {
-                remote.user = userName
-                remote.identityFile = identity
-                stage("Placeholder Stage...") {
-                  sshCommand remote: remote, sudo: true, command: 'echo "add your stuff here....."'
-                  sshCommand remote: remote, sudo: true, command: 'echo "some more stuff goes here....."'
-              }
-                stage("Scan with InSpec") {
-                  sshCommand remote: remote, sudo: true, command: 'inspec exec /root/linux-baseline/'
-              }
+    agent any
+    stages {
+        stage ('Daily Compliance Run') {
+            steps {
+                echo 'Running automated hardening and compliance scan on localhost...'
+                script {
+                    def remote = [:]
+                    remote.name = "localhost"
+                    remote.host = "127.0.0.1" // Vi kör lokalt mot Cloud Shell/Jenkins-hosten!
+                    remote.allowAnyHosts = true
+                    
+                    withCredentials([sshUserPrivateKey(credentialsId: 'sshUser', keyFileVariable: 'identity', passphraseVariable: '', usernameVariable: 'userName')]) {
+                        remote.user = userName
+                        remote.identityFile = identity
+                        
+                        stage ("Enforce with Ansible") {
+                            // Vi ser till att paketen installeras och körs lokalt i din secops-mapp
+                            sh 'ansible-galaxy collection install devsec.hardening'
+                            sh 'cd ~/secops/ansible && ansible-playbook compliance.yaml'
+                        }
+                        
+                        stage ("Scan with InSpec") {
+                            // Vi kör inspec-kommandot direkt via Jenkins-agenten mot din lokala baslinje
+                            sh 'inspec exec --no-distinct-exit /root/linux-baseline/'
+                        }
+                    }
+                }
             }
-          }
-       }
+        }
     }
-  }
 }
-
