@@ -18,15 +18,14 @@ pipeline {
                             echo "Simulating or verifying baseline with Ansible container..."
                             sshCommand remote: remote, command: 'mkdir -p /tmp/secops && git clone https://github.com/lftraining-lfs262/secops.git /tmp/secops || (cd /tmp/secops && git pull)'
                             
-                            // Vi kör en ping/validering med Ansible istället så den inte kraschar på interna OS-variabler
                             cfg_cmd = "docker run --rm -v /tmp/secops:/secops -w /secops/ansible cytopia/ansible ansible localhost -m ping"
                             sshCommand remote: remote, command: cfg_cmd
                         }
                         
                         stage ("Scan with InSpec") {
                             echo "Running InSpec inside a Docker container on the host..."
-                            // Kör InSpec direkt mot baslinjen via dess officiella container!
-                            sshCommand remote: remote, command: 'docker run --rm chef/inspec exec https://github.com/dev-sec/linux-baseline --no-distinct-exit'
+                            // Vi har lagt till -e CHEF_LICENSE="accept" här nedanför!
+                            sshCommand remote: remote, command: 'docker run --rm -e CHEF_LICENSE="accept" chef/inspec exec https://github.com/dev-sec/linux-baseline --no-distinct-exit'
                         }
                     }
                 }
