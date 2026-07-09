@@ -7,7 +7,7 @@ pipeline {
         echo 'Running a compliance scan with inspec....'
           script{
             def remote = [:]
-            remote.name = "gke-node-1"
+            remote.name = "controlnode"
             remote.host = "136.115.77.101"
             remote.allowAnyHosts = true
 
